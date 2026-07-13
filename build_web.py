@@ -102,7 +102,7 @@ def build(source: str, uni: str, period: str, spark_len: int = 90) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", choices=["sample", "yfinance"], default="sample")
-    ap.add_argument("--universe", choices=["nifty50", "broad", "nifty500"], default="nifty50")
+    ap.add_argument("--universe", choices=["nifty50", "broad", "nifty500"], default="broad")
     ap.add_argument("--period", default="2y")
     ap.add_argument("--out", default=os.path.join(WEB_DIR, "signals.json"))
     args = ap.parse_args()

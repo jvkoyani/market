@@ -45,7 +45,7 @@ jobs:
         if: ${{ steps.hook.outputs.triggered != 'true' }}
         run: |
           python -m pip install -r requirements-build.txt
-          python build_web.py --source yfinance --universe nifty50 --period 2y \
+          python build_web.py --source yfinance --universe broad --period 2y \
             || python build_web.py --source sample
 
       - name: Commit refreshed data
