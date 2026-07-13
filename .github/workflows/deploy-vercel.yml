@@ -16,7 +16,12 @@ name: Deploy to Vercel
 on:
   push:
     branches: [claude/indian-stock-dashboard-cjsiyf, main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      vercel_token:
+        description: "One-time Vercel token (used only if the VERCEL_TOKEN secret is not set). Prefer the secret for anything recurring."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -25,18 +30,21 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # Prefer the stored secret; fall back to a one-time dispatch input.
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || inputs.vercel_token }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Require VERCEL_TOKEN
+      - name: Mask token & validate
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::error::VERCEL_TOKEN secret is not set. See the comment at the top of this workflow for setup."
+            echo "::error::No Vercel token. Set a VERCEL_TOKEN repo secret, or pass one via 'Run workflow'."
             exit 1
           fi
+          # Ensure the token never appears in any subsequent log output.
+          echo "::add-mask::$VERCEL_TOKEN"
+
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
