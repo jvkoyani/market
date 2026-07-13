@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "buildCommand": "python3 -m pip install -r requirements-build.txt && python3 build_web.py --source yfinance --universe broad --period 2y || python3 build_web.py --source sample || echo 'Falling back to committed web/signals.json'",
   "outputDirectory": "web",
   "cleanUrls": true,
