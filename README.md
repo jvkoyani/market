@@ -52,6 +52,57 @@ streamlit run app.py            # pick "Live NSE (yfinance)" in the sidebar
 
 Then open the URL Streamlit prints (usually http://localhost:8501).
 
+---
+
+## 🚀 Deploy on Vercel (static web dashboard)
+
+Streamlit is a persistent server and **does not run on Vercel**. So this repo
+also ships a **static** version of the dashboard (`web/`) that Vercel serves
+perfectly — same signals, an interactive portfolio sizer, and per-stock charts,
+all as static HTML + JSON with no server, WebSockets, or serverless timeouts.
+
+**How it works:** `build_web.py` runs the screener and writes
+`web/signals.json`; `web/index.html` fetches and renders it. On Vercel, the
+build step (see `vercel.json`) regenerates that JSON with **live NSE data** on
+every deploy, falling back to the committed sample if the network is
+unavailable so a deploy never fails.
+
+### Deploy in ~2 minutes
+1. Push this repo to GitHub (already on your branch).
+2. Go to **vercel.com → Add New → Project → Import** this repo.
+3. Vercel reads `vercel.json` automatically — **no settings to change**
+   (build runs `build_web.py`, output dir is `web/`). Click **Deploy**.
+4. Done — you get a live URL.
+
+Prefer the CLI?
+```bash
+npm i -g vercel
+vercel            # preview deploy
+vercel --prod     # production deploy
+```
+
+Want a purely static, zero-build deploy instead? Set the project's
+**Output Directory** to `web` and leave the Build Command empty — it will serve
+the committed `web/signals.json` (regenerate it yourself with
+`python build_web.py --source yfinance`).
+
+### Keeping the live site fresh
+The included GitHub Action `.github/workflows/refresh-data.yml` refreshes data
+on weekday evenings (after NSE close):
+- **Preferred:** add a repo secret `VERCEL_DEPLOY_HOOK` (Vercel → Project →
+  Settings → Git → Deploy Hooks). The Action pings it and Vercel rebuilds with
+  fresh live data. Nothing is committed.
+- **Fallback:** with no hook set, the Action builds `signals.json` itself and
+  commits it, which triggers Vercel's Git integration to redeploy.
+
+Build the static payload locally to preview it:
+```bash
+python build_web.py --source yfinance --universe nifty50   # or --source sample
+cd web && python -m http.server 8000                        # open localhost:8000
+```
+
+---
+
 ### Data modes
 - **Live NSE (yfinance):** real OHLCV from Yahoo Finance (`RELIANCE.NS`, …).
   Needs internet. Choose Nifty 50 / 100 / or a live Nifty 500 download.
@@ -99,9 +150,16 @@ the sidebar.
 
 ```
 market/
-├── app.py                     # Streamlit dashboard (entry point)
+├── app.py                     # Streamlit dashboard (local use)
+├── build_web.py               # generates web/signals.json for the static site
+├── web/                       # static dashboard deployed to Vercel
+│   ├── index.html             #   self-contained HTML/CSS/JS front-end
+│   └── signals.json           #   screener output (regenerated on deploy)
+├── vercel.json                # Vercel build + static output config
+├── .github/workflows/         # scheduled data refresh (deploy hook / commit)
 ├── generate_sample_data.py    # builds offline synthetic data
 ├── requirements.txt
+├── requirements-build.txt     # slim deps for the Vercel build step
 ├── stockdash/
 │   ├── universe.py            # NSE ticker lists (Nifty 50 / broad / live 500)
 │   ├── data.py                # OHLCV fetch: yfinance (live) + sample (offline)

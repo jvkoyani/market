@@ -1,0 +1,62 @@
+name: Refresh dashboard data
+
+# Keeps the deployed Vercel site fresh with real NSE data.
+#
+# Two ways it can work (set up whichever you prefer):
+#   A) Deploy Hook  -- add a repo secret VERCEL_DEPLOY_HOOK (Vercel > Project >
+#      Settings > Git > Deploy Hooks). This job pings it and Vercel rebuilds,
+#      running build_web.py with live data via vercel.json. Nothing is
+#      committed. Simplest.
+#   B) Commit mode   -- if no deploy hook is set, this job builds signals.json
+#      itself and commits it, which triggers Vercel's Git integration to
+#      redeploy.
+
+on:
+  schedule:
+    - cron: "45 10 * * 1-5"   # ~16:15 IST on weekdays (after market close)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Option A: just trigger a Vercel rebuild (preferred) ---
+      - name: Trigger Vercel deploy hook
+        id: hook
+        if: ${{ env.DEPLOY_HOOK != '' }}
+        run: |
+          curl -sS -X POST "$DEPLOY_HOOK"
+          echo "triggered=true" >> "$GITHUB_OUTPUT"
+
+      # --- Option B: build + commit signals.json (fallback) ---
+      - uses: actions/setup-python@v5
+        if: ${{ steps.hook.outputs.triggered != 'true' }}
+        with:
+          python-version: "3.12"
+
+      - name: Build signals.json with live data
+        if: ${{ steps.hook.outputs.triggered != 'true' }}
+        run: |
+          python -m pip install -r requirements-build.txt
+          python build_web.py --source yfinance --universe nifty50 --period 2y \
+            || python build_web.py --source sample
+
+      - name: Commit refreshed data
+        if: ${{ steps.hook.outputs.triggered != 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add web/signals.json
+          if git diff --cached --quiet; then
+            echo "No change in signals.json"
+          else
+            git commit -m "chore: refresh dashboard signals data"
+            git push
+          fi
