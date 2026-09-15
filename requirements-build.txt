@@ -1,0 +1,6 @@
+# Slim dependency set for the Vercel build step (no Streamlit needed to
+# generate the static signals.json). Keeps the build fast.
+pandas>=2.0
+numpy>=1.24
+yfinance>=0.2.40
+requests>=2.31
