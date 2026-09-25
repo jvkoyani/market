@@ -1,0 +1,21 @@
+# Keep the Vercel deploy a pure STATIC build.
+#
+# The key line is `app.py`: it is the Streamlit entrypoint, not a serverless
+# function. If uploaded, Vercel's zero-config Python runtime tries to build it
+# as a WSGI/ASGI function and fails with:
+#   "Found app.py but it does not export a top-level app/application/handler".
+# Excluding it (and requirements.txt) stops that auto-detection.
+#
+# NOTE: files the build step needs must NOT be listed here —
+#   build_web.py, stockdash/, sample_data/, requirements-build.txt, web/
+
+app.py
+requirements.txt
+generate_sample_data.py
+tests/
+.github/
+README.md
+*.png
+*.log
+__pycache__/
+.pytest_cache/

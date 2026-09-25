@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>India Stock Signals</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
+<meta name="description" content="Indian stock market signal dashboard — BUY/SELL/HOLD with entry, target and stop-loss, plus risk-managed position sizing." />
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#111418; --muted:#5b6470; --line:#e3e6ea;
+    --green:#0f9d58; --green-bg:#e6f4ec; --red:#d93025; --red-bg:#fbe9e7;
+    --amber:#b8860b; --amber-bg:#fbf3e0; --accent:#2b6cb0; --shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0e1116; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e; --line:#283039;
+      --green:#3fb950; --green-bg:#132a1c; --red:#f85149; --red-bg:#2c1414;
+      --amber:#d29922; --amber-bg:#2b2410; --accent:#58a6ff; --shadow:0 1px 3px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+  header h1{font-size:1.5rem;margin:0 0 4px}
+  header .sub{color:var(--muted);font-size:.9rem}
+  .meta{color:var(--muted);font-size:.8rem;margin-top:6px}
+  .banner{margin:16px 0;padding:12px 16px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);box-shadow:var(--shadow);font-size:.92rem}
+  .banner b{font-weight:700}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .n{font-size:1.7rem;font-weight:700;line-height:1}
+  .kpi .l{color:var(--muted);font-size:.78rem;margin-top:6px;text-transform:uppercase;letter-spacing:.03em}
+  .tabs{display:flex;gap:4px;margin:18px 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{padding:9px 14px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:.92rem;
+    font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);
+    cursor:pointer;font-size:.85rem;font-weight:600;color:var(--muted)}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  input[type=search],input[type=number]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg);color:var(--ink);font-size:.9rem}
+  .tblwrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:720px}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  th{color:var(--muted);font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;user-select:none}
+  tbody tr:hover td{background:var(--bg)}
+  td.reasons{text-align:left;white-space:normal;color:var(--muted);font-size:.8rem;max-width:320px}
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-weight:700;font-size:.76rem}
+  .BUY{color:var(--green);background:var(--green-bg)} .SELL{color:var(--red);background:var(--red-bg)}
+  .HOLD{color:var(--amber);background:var(--amber-bg)}
+  .btn{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+    cursor:pointer;font-weight:600;font-size:.86rem}
+  .btn:hover{border-color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:280px 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+  .field input,.field select{width:100%}
+  .stat{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:.9rem}
+  .stat b{font-weight:700}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.9rem}
+  .spark{width:100%;height:120px}
+  .discl{margin-top:26px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line);padding-top:14px}
+  .hide{display:none}
+  .hl{font-size:1.3rem;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📈 Indian Stock Market — Signal Dashboard</h1>
+    <div class="sub">Multi-factor technical analysis → BUY / SELL / HOLD with entry, target &amp; stop-loss, plus risk-managed sizing.</div>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <div class="banner" id="regime">…</div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="signals">🔎 Signals</button>
+    <button class="tab" data-tab="portfolio">💼 Portfolio</button>
+    <button class="tab" data-tab="detail">🔬 Stock Detail</button>
+  </div>
+
+  <!-- SIGNALS -->
+  <section id="tab-signals" class="panel">
+    <div class="controls">
+      <span class="chip on" data-f="BUY">BUY</span>
+      <span class="chip on" data-f="HOLD">HOLD</span>
+      <span class="chip on" data-f="SELL">SELL</span>
+      <input type="search" id="q" placeholder="Search symbol…" style="margin-left:auto" />
+      <button class="btn" id="csv">⬇️ CSV</button>
+    </div>
+    <div class="tblwrap">
+      <table id="sigtbl">
+        <thead><tr>
+          <th data-k="symbol">Symbol</th><th data-k="action">Action</th><th data-k="price">Price ₹</th>
+          <th data-k="target">Target ₹</th><th data-k="stop_loss">Stop ₹</th><th data-k="risk_reward">R:R</th>
+          <th data-k="score">Score</th><th data-k="trend">Trend</th><th data-k="rsi">RSI</th>
+          <th data-k="adx">ADX</th><th data-k="atr_pct">ATR%</th><th data-k="reasons">Why</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section id="tab-portfolio" class="panel hide">
+    <div class="grid2">
+      <div>
+        <div class="field"><label>Capital (₹)</label><input type="number" id="cap" step="50000"></div>
+        <div class="field"><label>Risk per trade: <b id="rptv"></b></label><input type="range" id="rpt" min="0.25" max="3" step="0.25"></div>
+        <div class="field"><label>Max per position: <b id="mppv"></b></label><input type="range" id="mpp" min="5" max="30" step="1"></div>
+        <div class="field"><label>Max total exposure: <b id="mexv"></b></label><input type="range" id="mex" min="20" max="100" step="5"></div>
+        <div class="field"><label>Max # positions: <b id="mnpv"></b></label><input type="range" id="mnp" min="3" max="25" step="1"></div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+        <div class="stat"><span>Positions</span><b id="p_n"></b></div>
+        <div class="stat"><span>Capital deployed</span><b id="p_dep"></b></div>
+        <div class="stat"><span>Cash buffer</span><b id="p_cash"></b></div>
+        <div class="stat"><span>Worst-case risk (all stops hit)</span><b id="p_risk" class="neg"></b></div>
+        <div class="stat"><span>Max reward (all targets hit)</span><b id="p_rew" class="pos"></b></div>
+      </div>
+      <div class="tblwrap">
+        <table id="postbl">
+          <thead><tr><th>Symbol</th><th>Shares</th><th>Entry ₹</th><th>Stop ₹</th><th>Target ₹</th>
+            <th>Capital ₹</th><th>Risk ₹</th><th>Risk %</th><th>Reward ₹</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="meta" id="p_note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL -->
+  <section id="tab-detail" class="panel hide">
+    <div class="controls">
+      <label class="meta" for="dsel">Symbol:</label>
+      <select id="dsel"></select>
+    </div>
+    <div id="dhead" class="controls"></div>
+    <svg class="spark" id="dspark" viewBox="0 0 600 120" preserveAspectRatio="none"></svg>
+    <p class="meta" id="dwhy"></p>
+  </section>
+
+  <div class="discl">
+    ⚠️ <b>Disclaimer:</b> Educational, algorithmic analysis tool — <b>not investment advice</b>. Signals are
+    derived from historical price patterns and carry <b>no guarantee</b> of future returns. Markets involve risk of
+    loss. Do your own research and consult a SEBI-registered advisor before investing.
+  </div>
+</div>
+
+<script>
+const fmt = (n,d=2)=>Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
+const money = n => '₹'+Number(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+let DATA=null, sortK='score', sortAsc=false, activeFilters=new Set(['BUY','HOLD','SELL']);
+
+fetch('signals.json?_='+Date.now()).then(r=>r.json()).then(d=>{DATA=d;init();})
+  .catch(e=>{document.getElementById('meta').textContent='Could not load signals.json — run `python build_web.py` first.';});
+
+function init(){
+  const dt=new Date(DATA.generated_at);
+  document.getElementById('meta').textContent =
+    `Universe: ${DATA.universe} · Source: ${DATA.source} · Generated: ${dt.toLocaleString('en-IN')} · ${DATA.signals.length} stocks`;
+
+  const r=DATA.regime, icon={RISK_ON:'🟢',NEUTRAL:'🟡',RISK_OFF:'🔴',UNKNOWN:'⚪'}[r.label]||'⚪';
+  document.getElementById('regime').innerHTML =
+    `<b>Market regime: ${icon} ${r.label.replace('_','-')}</b> — ${r.note} <span class="meta">(exposure ×${r.multiplier})</span>`;
+
+  const k=DATA.kpis;
+  document.getElementById('kpis').innerHTML = [
+    ['Stocks analysed',k.analysed,''],['BUY signals',k.buy,'var(--green)'],
+    ['SELL / avoid',k.sell,'var(--red)'],['HOLD',k.hold,'var(--amber)']
+  ].map(([l,n,c])=>`<div class="kpi"><div class="n" style="color:${c||'var(--ink)'}">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  // tabs
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    ['signals','portfolio','detail'].forEach(n=>
+      document.getElementById('tab-'+n).classList.toggle('hide', n!==t.dataset.tab));
+  });
+
+  // signals filters + sort + search
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    c.classList.toggle('on');
+    activeFilters = new Set([...document.querySelectorAll('.chip.on')].map(x=>x.dataset.f));
+    renderSignals();
+  });
+  document.querySelectorAll('#sigtbl th').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(sortK===k) sortAsc=!sortAsc; else{sortK=k;sortAsc=false;} renderSignals();
+  });
+  document.getElementById('q').oninput=renderSignals;
+  document.getElementById('csv').onclick=downloadCsv;
+  renderSignals();
+
+  // portfolio controls
+  const df=DATA.defaults;
+  const cap=document.getElementById('cap'); cap.value=df.capital;
+  const rpt=document.getElementById('rpt'); rpt.value=df.risk_per_trade*100;
+  const mpp=document.getElementById('mpp'); mpp.value=df.max_position_pct*100;
+  const mex=document.getElementById('mex'); mex.value=df.max_exposure*100;
+  const mnp=document.getElementById('mnp'); mnp.value=df.max_positions;
+  ['cap','rpt','mpp','mex','mnp'].forEach(id=>document.getElementById(id).addEventListener('input',renderPortfolio));
+  renderPortfolio();
+
+  // detail
+  const sel=document.getElementById('dsel');
+  sel.innerHTML=DATA.signals.map(s=>`<option value="${s.symbol}">${s.symbol} — ${s.action}</option>`).join('');
+  sel.onchange=()=>renderDetail(sel.value);
+  renderDetail(DATA.signals[0].symbol);
+}
+
+function filteredSorted(){
+  const q=(document.getElementById('q').value||'').toUpperCase();
+  let rows=DATA.signals.filter(s=>activeFilters.has(s.action) && s.symbol.includes(q));
+  rows.sort((a,b)=>{
+    let x=a[sortK], y=b[sortK];
+    if(typeof x==='string'){return sortAsc?x.localeCompare(y):y.localeCompare(x);}
+    return sortAsc?x-y:y-x;
+  });
+  return rows;
+}
+
+function renderSignals(){
+  const rows=filteredSorted();
+  document.querySelector('#sigtbl tbody').innerHTML = rows.map(s=>`
+    <tr><td><b>${s.symbol}</b></td>
+    <td><span class="badge ${s.action}">${s.action}</span></td>
+    <td>${fmt(s.price)}</td><td>${fmt(s.target)}</td><td>${fmt(s.stop_loss)}</td>
+    <td>${fmt(s.risk_reward,1)}</td><td>${Math.round(s.score)}</td><td>${s.trend}</td>
+    <td>${Math.round(s.rsi)}</td><td>${Math.round(s.adx)}</td><td>${fmt(s.atr_pct,1)}%</td>
+    <td class="reasons">${s.reasons}</td></tr>`).join('');
+}
+
+function downloadCsv(){
+  const cols=['symbol','action','price','target','stop_loss','risk_reward','score','trend','rsi','adx','atr_pct','reasons'];
+  const rows=filteredSorted();
+  const csv=[cols.join(',')].concat(rows.map(s=>cols.map(c=>{
+    const v=s[c]; return typeof v==='string' && v.includes(',') ? `"${v}"` : v;
+  }).join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='signals.csv'; a.click();
+}
+
+// --- client-side portfolio sizing (mirrors stockdash/risk.py) ---
+function renderPortfolio(){
+  const capital=+document.getElementById('cap').value;
+  const rpt=+document.getElementById('rpt').value/100;
+  const mpp=+document.getElementById('mpp').value/100;
+  const mex=+document.getElementById('mex').value/100;
+  const mnp=+document.getElementById('mnp').value;
+  document.getElementById('rptv').textContent=(rpt*100).toFixed(2)+'%';
+  document.getElementById('mppv').textContent=(mpp*100)+'%';
+  document.getElementById('mexv').textContent=(mex*100)+'%';
+  document.getElementById('mnpv').textContent=mnp;
+
+  const mult=DATA.regime.multiplier;
+  const exposureCap=capital*mex*mult;
+  const buys=DATA.signals.filter(s=>s.action==='BUY');
+  let deployed=0, totalRisk=0, totalRew=0; const positions=[];
+  for(const s of buys){
+    if(positions.length>=mnp) break;
+    const riskPerShare=s.price-s.stop_loss;
+    if(riskPerShare<=0) continue;
+    const sharesByRisk=(capital*rpt)/riskPerShare;
+    const sharesByCap=(capital*mpp)/s.price;
+    const shares=Math.floor(Math.max(0,Math.min(sharesByRisk,sharesByCap)));
+    if(shares<=0) continue;
+    const used=shares*s.price;
+    if(deployed+used>exposureCap) continue;
+    const risk=shares*riskPerShare, rew=shares*(s.target-s.price);
+    positions.push({sym:s.symbol,shares,entry:s.price,stop:s.stop_loss,target:s.target,used,risk,rew});
+    deployed+=used; totalRisk+=risk; totalRew+=rew;
+  }
+  document.getElementById('p_n').textContent=positions.length;
+  document.getElementById('p_dep').textContent=`${money(deployed)} (${(100*deployed/capital||0).toFixed(0)}%)`;
+  document.getElementById('p_cash').textContent=money(capital-deployed);
+  document.getElementById('p_risk').textContent=`${money(totalRisk)} (${(100*totalRisk/capital||0).toFixed(2)}%)`;
+  document.getElementById('p_rew').textContent=`${money(totalRew)} (${(100*totalRew/capital||0).toFixed(1)}%)`;
+  document.querySelector('#postbl tbody').innerHTML=positions.map(p=>`<tr>
+    <td><b>${p.sym}</b></td><td>${p.shares}</td><td>${fmt(p.entry)}</td><td>${fmt(p.stop)}</td>
+    <td>${fmt(p.target)}</td><td>${money(p.used)}</td><td>${money(p.risk)}</td>
+    <td>${(100*p.risk/capital).toFixed(2)}%</td><td>${money(p.rew)}</td></tr>`).join('')
+    || `<tr><td colspan="9" class="meta">No positions — no BUY signals fit the risk/exposure caps${mult<1?' (regime is throttling exposure to cash)':''}.</td></tr>`;
+  document.getElementById('p_note').textContent =
+    `Regime multiplier ×${mult} applied to max exposure. Worst-case loss if every open stop triggers is capped at ${(100*totalRisk/capital||0).toFixed(2)}% of capital — the core defence for a positive quarter.`;
+}
+
+function renderDetail(sym){
+  const s=DATA.signals.find(x=>x.symbol===sym); if(!s) return;
+  const cls=s.action;
+  document.getElementById('dhead').innerHTML=`
+    <span class="badge ${cls}" style="font-size:1rem">${s.action}</span>
+    <span class="hl">${s.symbol}</span>
+    <span>Price <b>${fmt(s.price)}</b></span><span>Target <b>${fmt(s.target)}</b></span>
+    <span>Stop <b>${fmt(s.stop_loss)}</b></span><span>R:R <b>${fmt(s.risk_reward,1)}:1</b></span>
+    <span>Score <b>${Math.round(s.score)}</b></span>`;
+  document.getElementById('dwhy').innerHTML='<b>Why:</b> '+s.reasons;
+  drawSpark(s.closes, s);
+}
+
+function drawSpark(closes, s){
+  const svg=document.getElementById('dspark'), W=600,H=120,pad=6;
+  const min=Math.min(...closes), max=Math.max(...closes), rng=(max-min)||1;
+  const pts=closes.map((c,i)=>{
+    const x=pad+(W-2*pad)*i/(closes.length-1);
+    const y=pad+(H-2*pad)*(1-(c-min)/rng); return [x,y];
+  });
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const up=closes[closes.length-1]>=closes[0];
+  const col=up?'var(--green)':'var(--red)';
+  const yFor=v=>pad+(H-2*pad)*(1-(v-min)/rng);
+  const lvl=(v,c,dash)=> (v>=min&&v<=max)?`<line x1="0" x2="${W}" y1="${yFor(v).toFixed(1)}" y2="${yFor(v).toFixed(1)}" stroke="${c}" stroke-width="1" stroke-dasharray="${dash}" opacity=".7"/>`:'';
+  svg.innerHTML=`
+    <path d="${path}" fill="none" stroke="${col}" stroke-width="2"/>
+    ${lvl(s.target,'var(--green)','4 3')}
+    ${lvl(s.stop_loss,'var(--red)','4 3')}`;
+}
+</script>
+</body>
+</html>
