@@ -1,0 +1,64 @@
+name: Deploy to Vercel
+
+# Runs the Vercel deploy from GitHub's infrastructure (which can reach Vercel),
+# so no local Vercel access or CLI login is needed.
+#
+# ONE-TIME SETUP: add a repository secret named VERCEL_TOKEN
+#   1. Create a token at https://vercel.com/account/tokens
+#   2. GitHub repo -> Settings -> Secrets and variables -> Actions -> New
+#      repository secret -> name: VERCEL_TOKEN, value: <the token>
+# Optional (to target an existing Vercel project instead of creating one):
+#   add VERCEL_ORG_ID and VERCEL_PROJECT_ID the same way.
+#
+# After that, every push to the branch deploys automatically. You can also run
+# it on demand from the Actions tab ("Run workflow").
+
+on:
+  push:
+    branches: [claude/indian-stock-dashboard-cjsiyf, main]
+  workflow_dispatch:
+    inputs:
+      vercel_token:
+        description: "One-time Vercel token (used only if the VERCEL_TOKEN secret is not set). Prefer the secret for anything recurring."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Prefer the stored secret; fall back to a one-time dispatch input.
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || inputs.vercel_token }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Mask token & validate
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::No Vercel token. Set a VERCEL_TOKEN repo secret, or pass one via 'Run workflow'."
+            exit 1
+          fi
+          # Ensure the token never appears in any subsequent log output.
+          echo "::add-mask::$VERCEL_TOKEN"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy to production
+        run: |
+          # --yes accepts defaults non-interactively (links/creates the project).
+          # Vercel builds server-side using vercel.json (static output in web/).
+          url=$(vercel deploy --prod --yes --token "$VERCEL_TOKEN")
+          echo "Deployed to: $url"
+          echo "## ✅ Deployed to Vercel" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
